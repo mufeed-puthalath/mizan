@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#143d30" />
+<title>Mizan — Expense & Giving Tracker</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- Supabase client (runs in the user's browser) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{
+    --bg:#f4eee1;
+    --bg-2:#efe7d6;
+    --surface:#fffdf7;
+    --ink:#1b2a23;
+    --muted:#6c7a70;
+    --faint:#9aa69c;
+    --primary:#143d30;
+    --primary-2:#1f5742;
+    --primary-soft:#e3eee7;
+    --gold:#b3892f;
+    --gold-2:#caa24c;
+    --gold-soft:#f0e3c0;
+    --rose:#b14a32;
+    --rose-soft:#f6e3dc;
+    --line:#e6ddca;
+    --line-2:#ded3bd;
+    --shadow:0 1px 2px rgba(31,42,35,.04), 0 8px 24px -12px rgba(31,42,35,.18);
+    --shadow-lg:0 18px 50px -22px rgba(20,61,48,.5);
+    --r:20px;
+    --r-sm:13px;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Jost',system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 100% -10%, #efe6d3 0%, transparent 55%),
+      radial-gradient(900px 500px at -10% 110%, #ece2ce 0%, transparent 50%),
+      var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;
+    line-height:1.4;
+  }
+  .num{font-variant-numeric:tabular-nums;}
+  h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:600;margin:0;letter-spacing:-.01em;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+  input,select{font-family:inherit;}
+
+  /* ---------- shell ---------- */
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px 120px;}
+
+  header.topbar{
+    max-width:560px;margin:0 auto;
+    padding:18px 16px 8px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .mark{
+    width:38px;height:38px;border-radius:11px;
+    background:linear-gradient(150deg,var(--primary),var(--primary-2));
+    display:grid;place-items:center;box-shadow:var(--shadow);
+    flex:0 0 auto;
+  }
+  .brand .name{font-family:'Fraunces',serif;font-size:23px;font-weight:600;letter-spacing:-.02em;}
+  .brand .name small{display:block;font-family:'Jost',sans-serif;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-top:-2px;}
+  .gear{width:38px;height:38px;border-radius:11px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;box-shadow:var(--shadow);color:var(--muted);transition:.2s;}
+  .gear:active{transform:scale(.94);}
+  .topbar-actions{display:flex;align-items:center;gap:8px;}
+  .undo-btn{position:relative;color:var(--primary);}
+  .undo-btn .undo-count{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--gold);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;font-family:'Jost',sans-serif;line-height:1;border:2px solid var(--bg);}
+
+  /* ---------- month nav ---------- */
+  .monthnav{
+    display:flex;align-items:center;justify-content:center;gap:14px;
+    margin:6px auto 16px;
+  }
+  .monthnav button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--primary);box-shadow:var(--shadow);transition:.18s;}
+  .monthnav button:active{transform:scale(.9);}
+  .monthnav .label{font-family:'Fraunces',serif;font-size:16px;font-weight:600;min-width:150px;text-align:center;}
+  .monthnav .today-pill{font-size:11px;color:var(--gold);font-weight:500;letter-spacing:.04em;}
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(155deg,#19493a 0%,#123a2d 55%,#0f3225 100%);
+    color:#f3ecdb;border-radius:var(--r);
+    padding:22px 22px 20px;box-shadow:var(--shadow-lg);
+    margin-bottom:18px;
+  }
+  .hero::before{content:"";position:absolute;inset:0;background:
+    radial-gradient(420px 220px at 90% -30%, rgba(202,162,76,.22), transparent 60%),
+    radial-gradient(360px 200px at -10% 120%, rgba(202,162,76,.10), transparent 55%);
+    pointer-events:none;}
+  .hero .topline{display:flex;justify-content:space-between;align-items:center;position:relative;}
+  .hero .topline span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#bcae8e;font-weight:500;}
+  .hero .leftlabel{font-size:13px;color:#cdbf9d;margin:14px 0 2px;position:relative;letter-spacing:.02em;}
+  .hero .bignum{font-family:'Fraunces',serif;font-size:46px;line-height:1;font-weight:600;letter-spacing:-.02em;position:relative;}
+  .hero .bignum .cur{font-size:20px;color:#caa24c;font-weight:500;margin-right:6px;letter-spacing:0;}
+  .hero .bignum.neg{color:#f0b9a6;}
+  .hero .submsg{font-size:12.5px;color:#bcae8e;margin-top:6px;position:relative;min-height:16px;}
+
+  .bar{height:7px;border-radius:6px;background:rgba(255,255,255,.13);overflow:hidden;margin:16px 0 4px;position:relative;}
+  .bar > i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#caa24c,#e0c477);width:0;transition:width .9s cubic-bezier(.2,.7,.2,1);}
+  .bar.over > i{background:linear-gradient(90deg,#e08a6f,#d96f4f);}
+  .barcap{display:flex;justify-content:space-between;font-size:10.5px;color:#a99e80;position:relative;letter-spacing:.03em;}
+  .carry{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.12);position:relative;}
+  .carry-k{font-size:12px;color:#bcae8e;flex:1 1 auto;min-width:0;}
+  .carry-k small{color:#a99e80;font-size:11px;}
+  .carry-tot{font-size:12px;color:#cdbf9d;flex:0 0 auto;text-align:right;}
+  .carry-tot b{font-size:15px;font-weight:600;color:#f1e6cc;font-family:'Fraunces',Georgia,serif;}
+  .carry-tot b.neg{color:#f0b9a6;}
+  .carry-tot small{font-size:10px;color:#a99e80;display:block;text-align:right;margin-top:1px;}
+  .netbal{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:14px;padding:11px 14px;border-radius:13px;background:rgba(202,162,76,.12);border:1px solid rgba(202,162,76,.28);position:relative;transition:.16s;text-align:left;}
+  .netbal:active{transform:scale(.99);background:rgba(202,162,76,.18);}
+  .nb-k{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:#d8c79a;}
+  .nb-k small{font-size:9.5px;letter-spacing:.04em;text-transform:none;color:#a99e80;font-weight:400;margin-left:2px;}
+  .nb-k svg{color:#caa24c;}
+  .nb-v{font-family:'Fraunces',Georgia,serif;font-size:21px;font-weight:600;color:#f1e6cc;letter-spacing:-.01em;}
+  .nb-v.neg{color:#f0b9a6;}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px;position:relative;}
+  .stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:10px 8px;text-align:left;transition:.18s;}
+  .stat:active{transform:scale(.96);background:rgba(255,255,255,.11);}
+  .stat .k{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#a99e80;font-weight:500;}
+  .stat .v{font-size:14px;font-weight:500;margin-top:3px;color:#f1e9d6;}
+  .stat .v small{font-size:10px;color:#a99e80;}
+  .stat.owe .v{color:#f0b9a6;}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:4px;background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:16px;box-shadow:inset 0 1px 2px rgba(31,42,35,.04);}
+  .tabs button{flex:1;padding:9px 6px;border-radius:10px;font-size:13px;font-weight:500;color:var(--muted);transition:.18s;letter-spacing:.01em;}
+  .tabs button.active{background:var(--surface);color:var(--primary);box-shadow:var(--shadow);font-weight:600;}
+
+  /* ---------- panels ---------- */
+  .panel{animation:fade .35s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  .panel-head{display:flex;align-items:baseline;justify-content:space-between;margin:2px 2px 12px;}
+  .panel-head h2{font-size:19px;}
+  .panel-head .sum{font-size:13px;color:var(--muted);}
+  .panel-head .sum b{color:var(--ink);font-weight:600;}
+
+  .addrow{display:flex;gap:8px;margin-bottom:14px;}
+  .addbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:var(--primary);color:#f3ecdb;border-radius:13px;padding:13px;font-size:14px;font-weight:500;box-shadow:0 8px 20px -10px rgba(20,61,48,.6);transition:.18s;letter-spacing:.01em;}
+  .addbtn:active{transform:translateY(1px) scale(.99);}
+  .addbtn.alt{background:var(--surface);color:var(--primary);border:1px solid var(--line);box-shadow:var(--shadow);}
+
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;}
+  .chip{font-size:12.5px;padding:7px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink);transition:.16s;display:flex;align-items:center;gap:6px;}
+  .chip:active{transform:scale(.95);border-color:var(--primary);}
+  .chip .dot{width:8px;height:8px;border-radius:50%;}
+
+  /* list cards */
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:14px 15px;margin-bottom:9px;box-shadow:var(--shadow);
+    display:flex;align-items:center;gap:13px;
+    animation:rise .4s ease both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .card .ic{width:38px;height:38px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;font-size:11px;font-weight:600;color:#fff;letter-spacing:.02em;}
+  .card .body{flex:1;min-width:0;}
+  .card .body .t{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .card .body .s{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .card .body .s .tag{background:var(--bg-2);border-radius:6px;padding:1px 7px;font-size:11px;color:var(--muted);}
+  .card .amt{font-size:16px;font-weight:600;white-space:nowrap;text-align:right;}
+  .card .amt.out{color:var(--rose);}
+  .card .x{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--faint);flex:0 0 auto;transition:.15s;}
+  .card .x:active{background:var(--rose-soft);color:var(--rose);}
+  .card.done{opacity:.62;}
+  .card.done .body .t{text-decoration:line-through;text-decoration-color:var(--faint);}
+
+  /* switch */
+  .sw{width:46px;height:27px;border-radius:999px;background:var(--line-2);position:relative;transition:.22s;flex:0 0 auto;}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.22s;}
+  .sw.on{background:var(--primary-2);}
+  .sw.on::after{transform:translateX(19px);}
+
+  /* settle button */
+  .mini{font-size:12px;padding:7px 12px;border-radius:10px;background:var(--primary-soft);color:var(--primary);font-weight:500;transition:.15s;white-space:nowrap;}
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 0;border-bottom:1px solid var(--line);}
+  .set-row:first-of-type{padding-top:6px;}
+  .set-k{font-size:11.5px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+  .set-v{font-size:16px;font-weight:500;margin-top:4px;}
+  .set-badge{font-size:10.5px;font-weight:600;color:var(--primary);background:var(--primary-soft);padding:4px 10px;border-radius:999px;letter-spacing:.05em;text-transform:uppercase;flex:0 0 auto;}
+  .set-note{font-size:12.5px;color:var(--muted);background:var(--bg-2);border-radius:12px;padding:12px 14px;margin:18px 0 14px;line-height:1.55;}
+  .save.danger{background:var(--rose-soft);color:var(--rose);box-shadow:none;border:1px solid #e8c9bf;}
+  .save.danger:active{transform:scale(.99);}
+  .ms-head{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:20px 0 6px;}
+  .ms-head b{color:var(--ink);font-family:'Fraunces',Georgia,serif;font-size:15px;font-weight:600;}
+  .src-chip{padding:0;gap:0;overflow:hidden;}
+  .src-chip .chip-label{padding:7px 6px 7px 13px;font-size:12.5px;color:var(--ink);background:none;border:none;}
+  .src-chip .chip-x{padding:7px 11px 7px 4px;font-size:14px;line-height:1;color:var(--faint);background:none;border:none;}
+  .src-chip .chip-x:active{color:var(--rose);}
+  .addsrc{display:inline-flex;align-items:center;gap:6px;}
+  .addsrc input{width:128px;padding:7px 13px;border-radius:999px;border:1px dashed var(--line-2);background:#fffefb;font-size:12.5px;color:var(--ink);}
+  .addsrc input:focus{outline:none;border-color:var(--primary-2);border-style:solid;}
+  .addsrc .mini{padding:7px 13px;}
+  .toast-undo{margin-left:14px;color:var(--gold-2);font-weight:600;background:none;border:none;padding:0;cursor:pointer;font-family:'Jost',sans-serif;font-size:13px;}
+  .card.inactive{opacity:.6;}
+  .card.inactive .amt{color:var(--faint);}
+  .grp-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:20px 2px 8px;}
+  .meta-active{color:var(--primary-2);} .meta-ended{color:var(--rose);} .meta-paused{color:var(--gold);} .meta-upcoming{color:var(--muted);}
+  .opt-check{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid var(--line-2);border-radius:13px;background:var(--bg-2);margin:4px 0 16px;cursor:pointer;}
+  .opt-check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--primary-2);flex:0 0 auto;}
+  .opt-check b{font-size:14px;font-weight:500;display:block;}
+  .opt-check small{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45;}
+  .mini:active{transform:scale(.95);}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);}
+  .empty .e-ic{width:54px;height:54px;border-radius:16px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;margin:0 auto 14px;color:var(--gold);box-shadow:var(--shadow);}
+  .empty p{margin:0;font-size:14px;}
+  .empty p.sub{font-size:12.5px;color:var(--faint);margin-top:5px;}
+
+  /* breakdown */
+  .breakdown{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 15px;margin-bottom:14px;box-shadow:var(--shadow);}
+  .breakdown h3{font-size:13px;font-family:'Jost';font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:11px;}
+  .brow{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+  .brow:last-child{margin-bottom:0;}
+  .brow .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+  .brow .bn{flex:1;font-size:13px;color:var(--ink);}
+  .brow .bv{font-size:13px;font-weight:600;}
+  .brow .btrack{flex:1.3;height:6px;border-radius:5px;background:var(--bg-2);overflow:hidden;}
+  .brow .btrack > i{display:block;height:100%;border-radius:5px;}
+
+  /* ---------- modal / sheet ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(20,30,25,.42);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:.25s;z-index:40;}
+  .scrim.show{opacity:1;pointer-events:auto;}
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:var(--surface);border-radius:24px 24px 0 0;
+    padding:8px 20px calc(20px + env(safe-area-inset-bottom));
+    box-shadow:0 -20px 50px -20px rgba(20,61,48,.4);
+    transform:translateY(110%);visibility:hidden;
+    transition:transform .32s cubic-bezier(.2,.8,.2,1), visibility 0s linear .32s;
+    max-width:560px;margin:0 auto;max-height:88vh;overflow-y:auto;
+  }
+  .sheet.show{transform:translateY(0);visibility:visible;transition:transform .32s cubic-bezier(.2,.8,.2,1), visibility 0s;}
+  .grab{width:42px;height:4px;border-radius:3px;background:var(--line-2);margin:8px auto 14px;}
+  .sheet h2{font-size:21px;margin-bottom:4px;}
+  .sheet .sub{font-size:13px;color:var(--muted);margin-bottom:18px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;}
+  .field input,.field select{
+    width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line-2);
+    background:#fffefb;font-size:16px;color:var(--ink);transition:.16s;
+  }
+  .field input:focus,.field select:focus{outline:none;border-color:var(--primary-2);box-shadow:0 0 0 3px var(--primary-soft);}
+  .amount-field label{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .cur-toggle{display:inline-flex;gap:2px;background:var(--bg-2);border:1px solid var(--line);border-radius:9px;padding:2px;flex:0 0 auto;}
+  .cur-toggle button{font-family:'Jost',sans-serif;font-size:11px;font-weight:600;letter-spacing:.04em;padding:4px 11px;border-radius:7px;color:var(--muted);transition:.15s;}
+  .cur-toggle button.active{background:var(--surface);color:var(--primary);box-shadow:var(--shadow);}
+  .amt-input{position:relative;}
+  .amt-input .cur{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--gold);font-weight:500;font-size:15px;pointer-events:none;}
+  .amt-input input{padding-left:52px;font-size:20px;font-weight:500;}
+  .amt-preview{font-size:12px;color:var(--gold);margin-top:8px;padding-left:2px;font-weight:500;letter-spacing:.01em;}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .save{width:100%;padding:15px;border-radius:14px;background:var(--primary);color:#f3ecdb;font-size:15px;font-weight:600;margin-top:6px;box-shadow:0 10px 24px -12px rgba(20,61,48,.7);transition:.16s;letter-spacing:.01em;}
+  .save:active{transform:scale(.99);}
+  .save:disabled{opacity:.5;}
+
+  /* manage list inside sheet */
+  .ms-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);}
+  .ms-item:last-child{border-bottom:none;}
+  .ms-item .body{flex:1;}
+  .ms-item .body .t{font-size:14px;font-weight:500;}
+  .ms-item .body .s{font-size:12px;color:var(--muted);}
+  .ms-item .amt{font-weight:600;font-size:14px;}
+
+  /* ---------- setup ---------- */
+  #setup{display:none;min-height:100vh;padding:30px 20px 60px;}
+  #setup .box{max-width:440px;margin:0 auto;}
+  #setup .mark-lg{width:60px;height:60px;border-radius:17px;background:linear-gradient(150deg,var(--primary),var(--primary-2));display:grid;place-items:center;margin:18px auto 18px;box-shadow:var(--shadow-lg);}
+  #setup h1{font-size:30px;text-align:center;margin-bottom:6px;}
+  #setup .tag{text-align:center;color:var(--muted);font-size:14px;margin-bottom:26px;}
+  #setup .panel-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:var(--shadow);}
+  #setup .panel-box h3{font-size:17px;margin-bottom:4px;}
+  #setup .panel-box p{font-size:13px;color:var(--muted);margin:0 0 18px;line-height:1.5;}
+  #setup .steps{font-size:12.5px;color:var(--muted);background:var(--bg-2);border-radius:12px;padding:13px 15px;margin-top:18px;line-height:1.7;}
+  #setup .steps b{color:var(--ink);}
+  #setup .steps code{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:11px;}
+  #login{display:none;min-height:100vh;padding:30px 20px 60px;}
+  #login .box{max-width:420px;margin:0 auto;}
+  #login .mark-lg{width:60px;height:60px;border-radius:17px;background:linear-gradient(150deg,var(--primary),var(--primary-2));display:grid;place-items:center;margin:18px auto;box-shadow:var(--shadow-lg);}
+  #login h1{font-size:30px;text-align:center;margin-bottom:6px;}
+  #login .tag{text-align:center;color:var(--muted);font-size:14px;margin-bottom:26px;}
+  #login .panel-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:var(--shadow);}
+  .lg-err{font-size:13px;color:var(--rose);margin-top:12px;min-height:16px;text-align:center;}
+  .reset-link{display:block;width:100%;text-align:center;margin-top:12px;font-size:12px;color:var(--faint);background:none;border:none;cursor:pointer;}
+
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-120%);visibility:hidden;z-index:90;background:var(--ink);color:#f3ecdb;padding:12px 18px;border-radius:13px;font-size:13.5px;font-weight:500;box-shadow:var(--shadow-lg);transition:transform .3s cubic-bezier(.2,.8,.2,1), visibility 0s linear .3s;max-width:90vw;text-align:center;}
+  .toast.show{transform:translateX(-50%) translateY(0);visibility:visible;transition:transform .3s cubic-bezier(.2,.8,.2,1), visibility 0s;}
+  .toast.err{background:#7a2f1d;}
+  .toast.ok{background:var(--primary);}
+
+  .loading{display:grid;place-items:center;padding:60px;color:var(--muted);}
+  .spin{width:26px;height:26px;border:3px solid var(--line-2);border-top-color:var(--primary);border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+
+  @media (min-width:600px){
+    .sheet{left:50%;right:auto;bottom:50%;transform:translate(-50%,120%);border-radius:24px;width:480px;}
+    .sheet.show{transform:translate(-50%,50%);}
+  }
+</style>
+</head>
+<body>
+
+<!-- ====================== SETUP SCREEN ====================== -->
+<div id="setup">
+  <div class="box">
+    <div class="mark-lg">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#caa24c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-2.5 6a3.5 3.5 0 0 0 5 0L5 7z"/><path d="M19 7l-2.5 6a3.5 3.5 0 0 0 5 0L19 7z"/><path d="M8 21h8"/></svg>
+    </div>
+    <h1>Mizan</h1>
+    <p class="tag">Your money, in balance.</p>
+    <div class="panel-box">
+      <h3>Connect your Supabase</h3>
+      <p>Paste your project URL and anon key to start tracking. They are stored only in this browser.</p>
+      <div class="field">
+        <label>Project URL</label>
+        <input id="su-url" type="text" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label>Anon (public) key</label>
+        <input id="su-key" type="text" placeholder="eyJhbGciOi..." autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <button class="save" id="su-save">Connect</button>
+      <div class="steps">
+        <b>First time?</b> Open the SQL editor in Supabase, paste in <code>mizan-schema.sql</code> and run it to create the tables. Then grab your URL + anon key from <b>Project Settings → API</b>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== LOGIN ====================== -->
+<div id="login">
+  <div class="box">
+    <div class="mark-lg">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#caa24c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-2.5 6a3.5 3.5 0 0 0 5 0L5 7z"/><path d="M19 7l-2.5 6a3.5 3.5 0 0 0 5 0L19 7z"/><path d="M8 21h8"/></svg>
+    </div>
+    <h1>Mizan</h1>
+    <p class="tag">Welcome back.</p>
+    <div class="panel-box">
+      <div class="field"><label>User ID</label><input id="lg-user" type="text" value="mufeed.puthalath" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+      <div class="field"><label>Password</label><input id="lg-pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')document.getElementById('lg-btn').click()"></div>
+      <button class="save" id="lg-btn">Sign in</button>
+      <div id="lg-err" class="lg-err"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== APP ====================== -->
+<div id="app" style="display:none">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#caa24c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-2.5 6a3.5 3.5 0 0 0 5 0L5 7z"/><path d="M19 7l-2.5 6a3.5 3.5 0 0 0 5 0L19 7z"/><path d="M8 21h8"/></svg>
+      </div>
+      <div class="name">Mizan<small>in balance</small></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="gear undo-btn" id="undo-btn" title="Undo last action" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H9"/></svg>
+        <span class="undo-count">0</span>
+      </button>
+      <button class="gear" id="gear" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="monthnav">
+    <button id="m-prev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div>
+      <div class="label" id="m-label">—</div>
+      <div class="today-pill" id="m-today" style="text-align:center"></div>
+    </div>
+    <button id="m-next"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+  </div>
+
+  <div class="wrap">
+    <!-- HERO -->
+    <div class="hero">
+      <div class="topline">
+        <span>Left to spend</span>
+        <span id="hero-month"></span>
+      </div>
+      <div class="leftlabel">After givings, dues &amp; spending</div>
+      <div class="bignum" id="hero-left"><span class="cur">AED</span>0</div>
+      <div class="submsg" id="hero-msg"></div>
+
+      <div class="carry" id="carry-row" style="display:none">
+        <span class="carry-k" id="carry-k">＋ from earlier months</span>
+        <span class="carry-tot">＝ <b id="carry-tot">—</b> <small id="carry-sub">to spend with carry-over</small></span>
+      </div>
+
+      <div class="bar" id="hero-bar"><i></i></div>
+      <div class="barcap"><span id="cap-used">used</span><span id="cap-income">income</span></div>
+
+      <button class="netbal" id="netbal" title="Money in hand through this month">
+        <span class="nb-k"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> Net balance <small id="nb-sub">through this month</small></span>
+        <span class="nb-v num" id="nb-v">—</span>
+      </button>
+
+      <div class="stats">
+        <button class="stat" id="stat-income"><div class="k">Income</div><div class="v num" id="s-income">—</div></button>
+        <button class="stat" id="stat-monthly"><div class="k">Givings</div><div class="v num" id="s-monthly">—</div></button>
+        <button class="stat owe" id="stat-dues"><div class="k">To give</div><div class="v num" id="s-dues">—</div></button>
+        <button class="stat" id="stat-spent"><div class="k">Spent</div><div class="v num" id="s-spent">—</div></button>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button data-tab="daily" class="active">Daily</button>
+      <button data-tab="monthly">Givings</button>
+      <button data-tab="dues">To give</button>
+    </div>
+
+    <div id="panel"><div class="loading"><div class="spin"></div></div></div>
+  </div>
+</div>
+
+<!-- modal + toast roots -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   CONFIG  — paste your Supabase project URL + anon key here,
+   OR leave as-is and enter them on the setup screen (saved
+   to this browser's localStorage).
+   ========================================================= */
+const SUPABASE_URL = "https://jebaqfcczxdlisrrclqp.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImplYmFxZmNjenhkbGlzcnJjbHFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMTIyODYsImV4cCI6MjA5NTc4ODI4Nn0.QlxmJT2j6yzZGYvtuQM0XjahYigWG2edUrJSUmXj8E4";
+
+/* ---------- category palettes ---------- */
+const EXP_CATS = {
+  food:      {label:"Food",       color:"#b14a32"},
+  groceries: {label:"Groceries",  color:"#5a7d4f"},
+  transport: {label:"Transport",  color:"#3c6b8a"},
+  bills:     {label:"Bills",      color:"#b3892f"},
+  shopping:  {label:"Shopping",   color:"#8a5d8f"},
+  health:    {label:"Health",     color:"#2f8a7e"},
+  family:    {label:"Family",     color:"#a0683a"},
+  other:     {label:"Other",      color:"#7c8a7e"}
+};
+const COMMIT_CATS = {
+  rent:    {label:"Room rent", color:"#143d30"},
+  mess:    {label:"Mess",      color:"#b3892f"},
+  home:    {label:"Send home", color:"#a0683a"},
+  sadaqah: {label:"Sadaqah",   color:"#1f5742"},
+  bills:   {label:"Bills",     color:"#3c6b8a"},
+  other:   {label:"Other",     color:"#7c8a7e"}
+};
+const COMMIT_SUGGEST = [
+  {name:"Room rent", cat:"rent"},
+  {name:"Mess",      cat:"mess"},
+  {name:"Send home", cat:"home"},
+  {name:"Sadaqah",   cat:"sadaqah"},
+  {name:"Phone",     cat:"bills"},
+  {name:"Transport", cat:"bills"}
+];
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+let db = null;
+const state = { month: ym(new Date()), tab:"daily", income:[], commitments:[], logs:[], dues:[], expenses:[], sources:[] };
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+function ym(d){ const x=new Date(d); return x.getFullYear()+"-"+pad2(x.getMonth()+1); }
+function ymd(d){ const x=new Date(d); return x.getFullYear()+"-"+pad2(x.getMonth()+1)+"-"+pad2(x.getDate()); }
+function monthLabel(s){ const [y,m]=s.split("-"); return new Date(+y,+m-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"}); }
+function shiftMonth(s,n){ const [y,m]=s.split("-").map(Number); const d=new Date(y,m-1+n,1); return ym(d); }
+function monthRange(s){ const [y,m]=s.split("-").map(Number); const start=ymd(new Date(y,m-1,1)); const end=ymd(new Date(y,m,1)); return {start,end}; }
+function money(n,code=true){
+  const v=Number(n)||0;
+  const s=Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:Number.isInteger(v)?0:2,maximumFractionDigits:2});
+  return (v<0?"-":"")+(code?"AED "+s:s);
+}
+function dayLabel(d){
+  const dt=new Date(d), t=new Date(), y=new Date(Date.now()-864e5);
+  if(ymd(dt)===ymd(t)) return "Today";
+  if(ymd(dt)===ymd(y)) return "Yesterday";
+  return dt.toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+}
+function toast(msg,kind=""){
+  const t=$("#toast"); t.textContent=msg; t.className="toast show "+kind;
+  clearTimeout(t._tm); t._tm=setTimeout(()=>t.className="toast",2600);
+}
+function toastUndo(msg){
+  const t=$("#toast");
+  t.innerHTML=`<span>${esc(msg)}</span><button class="toast-undo" onclick="undo()">Undo</button>`;
+  t.className="toast show"; clearTimeout(t._tm); t._tm=setTimeout(()=>t.className="toast",5000);
+}
+function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ---------- undo history (last 5 actions) ---------- */
+const undoStack=[];           // each: { label, undo: async()=>{} }
+const UNDO_MAX=5;
+let undoing=false;
+function pushUndo(label, undoFn){
+  undoStack.push({label, undo:undoFn});
+  while(undoStack.length>UNDO_MAX) undoStack.shift();
+  refreshUndoBtn();
+}
+function refreshUndoBtn(){
+  const b=$("#undo-btn"); if(!b) return;
+  if(undoStack.length){ b.style.display="grid"; b.querySelector(".undo-count").textContent=undoStack.length; }
+  else b.style.display="none";
+}
+async function undo(){
+  if(undoing || !undoStack.length) return;
+  undoing=true;
+  const act=undoStack.pop();
+  try{
+    await act.undo();
+    toast("Undone · "+act.label,"ok");
+  }catch(e){ console.error(e); toast("Couldn't undo","err"); }
+  finally{ undoing=false; refreshUndoBtn(); await loadAll(); }
+}
+
+/* ---------- currency / FX (INR <-> AED) — you control the rate ---------- */
+const fx={ rate:26 };                             // INR per 1 AED (tap the preview to change)
+let amtCur="AED";                                 // input currency for the open sheet
+(function(){ const s=parseFloat(localStorage.getItem("mizan_rate")); if(s>0) fx.rate=s; })();
+function fxRate(){ return fx.rate; }
+function editRate(){
+  const v=prompt("AED \u2192 INR rate\nHow many rupees do you get for 1 dirham?", fxRate().toFixed(2));
+  if(v===null) return;
+  const n=parseFloat(v);
+  if(!(n>0)){ toast("Enter a valid rate","err"); return; }
+  fx.rate=n; localStorage.setItem("mizan_rate",String(n)); updateAmtPreview();
+  const sr=document.querySelector("#set-rate"); if(sr) sr.textContent=n.toFixed(2);
+  toast("Rate set \u00B7 1 AED = "+n.toFixed(2)+" INR","ok");
+}
+function setAmtCur(c){
+  amtCur=c;
+  document.querySelectorAll(".cur-toggle button").forEach(b=>b.classList.toggle("active",b.dataset.c===c));
+  const el=document.querySelector(".amt-input .cur"); if(el) el.textContent = c==="INR" ? "\u20B9" : "AED";
+  updateAmtPreview();
+}
+function updateAmtPreview(){
+  const prev=document.querySelector("#amt-preview"); if(!prev) return;
+  const inp=document.querySelector("#f-amt"); const v=parseFloat(inp?inp.value:"");
+  const r=fxRate();
+  if(amtCur==="INR"){
+    prev.style.display="block";
+    prev.textContent = (v>0)
+      ? "\u2248 "+money(v/r)+" saved \u00B7 1 AED = "+r.toFixed(2)+" INR \u00B7 tap to edit"
+      : "1 AED = "+r.toFixed(2)+" INR \u00B7 tap to change rate";
+  }else{ prev.style.display="none"; }
+}
+function getAed(){
+  const inp=document.querySelector("#f-amt"); const v=parseFloat(inp?inp.value:"");
+  if(!(v>0)) return NaN;
+  return amtCur==="INR" ? Math.round((v/fxRate())*100)/100 : v;
+}
+
+/* ---------- bootstrap ---------- */
+function getCreds(){
+  const u=localStorage.getItem("mizan_url")||SUPABASE_URL;
+  const k=localStorage.getItem("mizan_key")||SUPABASE_ANON_KEY;
+  const ok=u && k && !u.includes("YOUR_") && !k.includes("YOUR_") && u.startsWith("http");
+  return {u,k,ok};
+}
+function toEmail(u){ u=(u||"").trim(); return u.includes("@") ? u : u+"@mizan.app"; }
+async function start(){
+  const {u,k,ok}=getCreds();
+  if(!ok){ $("#setup").style.display="block"; $("#app").style.display="none"; return; }
+  try{ db=window.supabase.createClient(u,k); }
+  catch(e){ toast("Could not start Supabase client","err"); $("#setup").style.display="block"; return; }
+  bindUI();
+  await gateAuth();
+}
+async function gateAuth(){
+  let session=null;
+  try{ const {data}=await db.auth.getSession(); session=data?data.session:null; }catch(e){}
+  if(session) showApp();
+  else { $("#setup").style.display="none"; $("#app").style.display="none"; $("#login").style.display="block"; }
+}
+function showApp(){
+  $("#setup").style.display="none"; $("#login").style.display="none"; $("#app").style.display="block";
+  refreshMonth(); loadAll();
+}
+async function signOut(){
+  try{ await db.auth.signOut(); }catch(e){}
+  location.reload();
+}
+$("#su-save").onclick=()=>{
+  const u=$("#su-url").value.trim(), k=$("#su-key").value.trim();
+  if(!u||!k){ toast("Both fields are needed","err"); return; }
+  if(!u.startsWith("http")){ toast("URL should start with https://","err"); return; }
+  localStorage.setItem("mizan_url",u); localStorage.setItem("mizan_key",k);
+  start();
+};
+$("#lg-btn").onclick=async ()=>{
+  const u=$("#lg-user").value, pass=$("#lg-pass").value, err=$("#lg-err"), btn=$("#lg-btn");
+  err.textContent="";
+  if(!u||!pass){ err.textContent="Enter your user ID and password."; return; }
+  btn.disabled=true; btn.textContent="Signing in…";
+  try{
+    const {error}=await db.auth.signInWithPassword({ email:toEmail(u), password:pass });
+    if(error) throw error;
+    $("#lg-pass").value=""; showApp();
+  }catch(e){ err.textContent="Wrong user ID or password."; }
+  finally{ btn.disabled=false; btn.textContent="Sign in"; }
+};
+
+/* ---------- data ---------- */
+async function loadAll(){
+  try{
+    const [inc,com,logs,dues,exp]=await Promise.all([
+      db.from("income").select("*"),
+      db.from("commitments").select("*").order("created_at",{ascending:true}),
+      db.from("commitment_logs").select("*"),
+      db.from("dues").select("*").order("created_at",{ascending:false}),
+      db.from("expenses").select("*").order("spent_on",{ascending:false}).order("created_at",{ascending:false})
+    ]);
+    for(const r of [inc,com,logs,dues,exp]) if(r.error) throw r.error;
+    state.income=inc.data||[]; state.commitments=com.data||[]; state.logs=logs.data||[];
+    state.dues=dues.data||[]; state.expenses=exp.data||[];
+    try{ const sr=await db.from("income_sources").select("*").order("created_at",{ascending:true}); state.sources=(sr&&!sr.error&&sr.data)?sr.data:[]; }catch(e){ state.sources=[]; }
+    renderAll();
+  }catch(e){
+    console.error(e);
+    toast("Couldn't load — did you run the schema?","err");
+    $("#panel").innerHTML=`<div class="empty"><div class="e-ic">!</div><p>Connection works, but no data came back.</p><p class="sub">Make sure you ran mizan-schema.sql in Supabase.</p></div>`;
+  }
+}
+
+/* ---------- computed ---------- */
+function isActiveIn(c,m){
+  // paused = off everywhere; start/end bound the window; missing start = treat as already-started (no back-dating)
+  if(c.is_paused) return false;
+  if(c.is_active===false) return false;
+  if(c.start_month && m < c.start_month) return false;
+  if(c.end_month && m > c.end_month) return false;
+  return true;
+}
+function activeCommitments(m){ return state.commitments.filter(c=>isActiveIn(c,m)); }
+const _commitById = id => state.commitments.find(c=>String(c.id)===String(id));
+// sum of paid-logs that belong to a giving ACTIVE in the log's own month (ignores ended/paused stragglers)
+function paidActive(filterFn){
+  return state.logs.filter(filterFn).reduce((a,l)=>{
+    const c=_commitById(l.commitment_id);
+    return (c && isActiveIn(c,l.month)) ? a + +l.amount_paid : a;
+  },0);
+}
+function calc(){
+  const m=state.month, R=monthRange(m);
+  const incomeM = state.income.filter(i=>i.month===m).reduce((a,b)=>a+ +b.amount,0);
+  const committed = activeCommitments(m).reduce((a,b)=>a+ +b.amount,0);
+  const paidM = paidActive(l=>l.month===m);
+  const duesOut = state.dues.filter(d=>!d.is_settled).reduce((a,b)=>a+ +b.amount,0);
+  const spentM = state.expenses.filter(e=>e.spent_on>=R.start && e.spent_on<R.end).reduce((a,b)=>a+ +b.amount,0);
+  const left = incomeM - committed - duesOut - spentM;
+  const used = committed + duesOut + spentM;
+  return {incomeM,committed,paidM,duesOut,spentM,left,used};
+}
+function monthNet(m){
+  // a single month's standalone result: income - full active givings - spending (no dues; they're open-ended)
+  const R=monthRange(m);
+  const inc=state.income.filter(i=>i.month===m).reduce((a,b)=>a+ +b.amount,0);
+  const giv=activeCommitments(m).reduce((a,b)=>a+ +b.amount,0);
+  const sp=state.expenses.filter(e=>e.spent_on>=R.start && e.spent_on<R.end).reduce((a,b)=>a+ +b.amount,0);
+  return inc - giv - sp;
+}
+function carryOver(){
+  // everything left over (or overspent) from all months strictly BEFORE the selected one
+  const m=state.month;
+  const months=new Set();
+  state.income.forEach(i=>{ if(i.month) months.add(i.month); });
+  state.expenses.forEach(e=>{ if(e.spent_on) months.add(e.spent_on.slice(0,7)); });
+  state.logs.forEach(l=>{ if(l.month) months.add(l.month); });
+  state.commitments.forEach(c=>{ if(c.start_month) months.add(c.start_month); });
+  let total=0;
+  months.forEach(mm=>{ if(mm<m) total+=monthNet(mm); });
+  return total;
+}
+function netBalance(){
+  // running tally of money in hand, everything dated on/before the selected month
+  const m=state.month, endEx=monthRange(m).end; // exclusive first-day of NEXT month
+  const incomeAll = state.income.filter(i=>i.month<=m).reduce((a,b)=>a+ +b.amount,0);
+  const spentAll  = state.expenses.filter(e=>e.spent_on<endEx).reduce((a,b)=>a+ +b.amount,0);
+  const paidAll   = paidActive(l=>l.month<=m); // only ticked givings that were active that month
+  // dues leave your hand only when you SETTLE them — count a settled due by its settle date.
+  // BUT if its repayment was already logged as an expense ("Repaid {person}…"), it's in spentAll — don't subtract twice.
+  const duesPaid  = state.dues.filter(d=>{
+    if(!(d.is_settled && d.settled_on && d.settled_on<endEx)) return false;
+    const loggedAsExp = state.expenses.some(e=> e.note && e.note.indexOf("Repaid "+d.person)===0 && +e.amount===+d.amount && e.spent_on===d.settled_on);
+    return !loggedAsExp;
+  }).reduce((a,b)=>a+ +b.amount,0);
+  return incomeAll - spentAll - paidAll - duesPaid;
+}
+
+/* ---------- render ---------- */
+function renderAll(){ renderHero(); renderPanel(); }
+
+let heroAnimTo=0;
+function renderHero(){
+  const c=calc();
+  $("#hero-month").textContent=monthLabel(state.month);
+  // big number with count-up
+  const el=$("#hero-left");
+  const noIncome = c.incomeM===0;
+  el.className="bignum"+((!noIncome && c.left<0)?" neg":"");
+  animateMoney(el, noIncome?0:c.left);
+  // message
+  const msg=$("#hero-msg");
+  if(noIncome){ msg.textContent = c.used>0 ? money(c.used)+" in givings & dues set aside — add your income to plan." : "Add your income to see your plan for the month."; }
+  else if(c.left<0){ msg.textContent="You're over by "+money(Math.abs(c.left))+" — ease up where you can."; }
+  else { msg.textContent="of "+money(c.incomeM)+" income · "+money(c.used)+" accounted for."; }
+  // bar
+  const pct=c.incomeM>0?Math.min(100,(c.used/c.incomeM)*100):0;
+  const bar=$("#hero-bar"); bar.className="bar"+(c.used>c.incomeM&&c.incomeM>0?" over":"");
+  bar.querySelector("i").style.width=pct+"%";
+  $("#cap-used").textContent=money(c.used)+" used";
+  $("#cap-income").textContent=money(c.incomeM);
+  // carry-over from earlier months (continuity reference)
+  const carry=carryOver();
+  const crow=$("#carry-row");
+  if(Math.round(carry)!==0){
+    crow.style.display="flex";
+    const sign = carry>0 ? "＋" : "−";
+    $("#carry-k").innerHTML=`${sign} ${money(Math.abs(carry))} <small>${carry>0?"carried over":"overspent earlier"}</small>`;
+    // when no income is entered yet, the carry itself is the meaningful figure — don't add it to a phantom negative
+    const combined = noIncome ? carry : (c.left + carry);
+    const ct=$("#carry-tot"); ct.textContent=money(combined); ct.className=combined<0?"neg":"";
+    const csub=$("#carry-sub"); if(csub) csub.textContent = noIncome ? "available so far" : "to spend with carry-over";
+  } else { crow.style.display="none"; }
+  // net balance (cumulative through selected month)
+  const nb=netBalance();
+  const nbEl=$("#nb-v"); nbEl.textContent=money(nb); nbEl.className="nb-v num"+(nb<0?" neg":"");
+  $("#nb-sub").textContent = state.month===ym(new Date()) ? "as of today" : "through "+monthLabel(state.month);
+  // stats
+  $("#s-income").textContent=money(c.incomeM,false);
+  $("#s-monthly").innerHTML=money(c.committed,false)+(c.committed?` <small>· ${Math.round((c.paidM/c.committed)*100)||0}% paid</small>`:"");
+  $("#s-dues").textContent=money(c.duesOut,false);
+  $("#s-spent").textContent=money(c.spentM,false);
+}
+function animateMoney(el,to){
+  const from=el._cur||0; el._cur=to;
+  const start=performance.now(), dur=650;
+  function tick(t){
+    const p=Math.min(1,(t-start)/dur), e=1-Math.pow(1-p,3), v=from+(to-from)*e;
+    el.innerHTML=`<span class="cur">AED</span>${Math.round(v).toLocaleString("en-US")}`;
+    if(p<1) requestAnimationFrame(tick);
+    else el.innerHTML=`<span class="cur">AED</span>${money(to,false)}`;
+  }
+  requestAnimationFrame(tick);
+}
+
+function renderPanel(){
+  if(state.tab==="daily") renderDaily();
+  else if(state.tab==="monthly") renderMonthly();
+  else renderDues();
+}
+
+/* ----- DAILY ----- */
+function renderDaily(){
+  const R=monthRange(state.month);
+  const list=state.expenses.filter(e=>e.spent_on>=R.start && e.spent_on<R.end);
+  const total=list.reduce((a,b)=>a+ +b.amount,0);
+  // category breakdown
+  const byCat={};
+  list.forEach(e=>{ byCat[e.category]=(byCat[e.category]||0)+ +e.amount; });
+  const cats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+
+  let html=`<div class="panel">
+    <div class="panel-head"><h2>Daily spending</h2><div class="sum">spent <b>${money(total)}</b></div></div>
+    <div class="addrow"><button class="addbtn" onclick="openExpense()">+ &nbsp;Log an expense</button></div>`;
+
+  if(cats.length){
+    html+=`<div class="breakdown"><h3>Where it went</h3>`;
+    const max=cats[0][1];
+    cats.slice(0,6).forEach(([k,v])=>{
+      const cat=EXP_CATS[k]||EXP_CATS.other;
+      html+=`<div class="brow"><span class="dot" style="background:${cat.color}"></span><span class="bn">${cat.label}</span>
+        <span class="btrack"><i style="width:${(v/max*100)}%;background:${cat.color}"></i></span>
+        <span class="bv">${money(v,false)}</span></div>`;
+    });
+    html+=`</div>`;
+  }
+
+  if(!list.length){
+    html+=emptyState("coin","Nothing logged this month yet.","Tap above to add your first expense.");
+  }else{
+    let lastDay="";
+    list.forEach((e,i)=>{
+      const d=dayLabel(e.spent_on);
+      if(d!==lastDay){ html+=`<div style="font-size:12px;font-weight:500;color:var(--faint);letter-spacing:.04em;margin:14px 2px 7px;text-transform:uppercase">${d}</div>`; lastDay=d; }
+      const cat=EXP_CATS[e.category]||EXP_CATS.other;
+      html+=`<div class="card" style="animation-delay:${Math.min(i,8)*30}ms">
+        <div class="ic" style="background:${cat.color}">${cat.label.slice(0,2)}</div>
+        <div class="body"><div class="t">${esc(e.note)||cat.label}</div>
+          ${e.note?`<div class="s"><span class="tag">${cat.label}</span></div>`:""}</div>
+        <div class="amt out">−${money(e.amount,false)}</div>
+        <button class="x" onclick="del('expenses','${e.id}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+      </div>`;
+    });
+  }
+  html+=`</div>`;
+  $("#panel").innerHTML=html;
+}
+
+/* ----- MONTHLY (givings) ----- */
+function commitMeta(c,m){
+  // returns a short status line for a giving relative to the viewed month
+  if(c.is_paused) return {tag:"paused", note:"paused"};
+  if(c.start_month && m < c.start_month) return {tag:"upcoming", note:"starts "+monthLabel(c.start_month)};
+  if(c.end_month && m > c.end_month) return {tag:"ended", note:"ended "+monthLabel(c.end_month)};
+  if(c.end_month) return {tag:"active", note:"until "+monthLabel(c.end_month)};
+  return {tag:"active", note:"ongoing"};
+}
+function renderMonthly(){
+  const m=state.month;
+  const items=state.commitments;
+  const active=items.filter(c=>isActiveIn(c,m));
+  const inactive=items.filter(c=>!isActiveIn(c,m));
+  const total=active.reduce((a,b)=>a+ +b.amount,0);
+  const paidIds=new Set(state.logs.filter(l=>l.month===m).map(l=>l.commitment_id));
+  const paid=active.filter(c=>paidIds.has(c.id)).reduce((a,b)=>a+ +b.amount,0);
+
+  let html=`<div class="panel">
+    <div class="panel-head"><h2>Monthly givings</h2><div class="sum"><b>${money(paid,false)}</b> of ${money(total)} paid</div></div>`;
+
+  if(items.length<6){
+    html+=`<div class="chips">`;
+    COMMIT_SUGGEST.filter(s=>!items.some(c=>c.name.toLowerCase()===s.name.toLowerCase())).forEach(s=>{
+      const cat=COMMIT_CATS[s.cat];
+      html+=`<button class="chip" onclick="openCommit('${esc(s.name)}','${s.cat}')"><span class="dot" style="background:${cat.color}"></span>${s.name}</button>`;
+    });
+    html+=`</div>`;
+  }
+  html+=`<div class="addrow"><button class="addbtn alt" onclick="openCommit()">+ &nbsp;Add a monthly giving</button></div>`;
+
+  if(!items.length){
+    html+=emptyState("repeat","No fixed givings set up.","Rent, mess, money home, sadaqah — add them once and tick them off each month.");
+  }else{
+    const card=(c,i)=>{
+      const cat=COMMIT_CATS[c.category]||COMMIT_CATS.other;
+      const isPaid=paidIds.has(c.id);
+      const meta=commitMeta(c,m);
+      const on=isActiveIn(c,m);
+      return `<div class="card ${isPaid?'done':''} ${on?'':'inactive'}" style="animation-delay:${Math.min(i,8)*30}ms">
+        <div class="ic" style="background:${cat.color}">${cat.label.slice(0,2)}</div>
+        <div class="body"><div class="t">${esc(c.name)}</div>
+          <div class="s"><span class="tag">${cat.label}</span><span class="meta-${meta.tag}">· ${meta.note}</span>${c.due_day?`<span>· due ${ordinal(c.due_day)}</span>`:""}
+            <button class="x" style="width:auto;padding:0 4px;height:auto;font-size:11px;color:var(--gold)" onclick="openCommitManage('${c.id}')">edit</button></div></div>
+        <div class="amt">${money(c.amount,false)}</div>
+        ${on?`<div class="sw ${isPaid?'on':''}" onclick="togglePaid('${c.id}',${c.amount},${isPaid})" title="Mark paid for ${monthLabel(m)}"></div>`
+            :`<span class="mini" onclick="openCommitManage('${c.id}')">manage</span>`}
+      </div>`;
+    };
+    active.forEach((c,i)=>{ html+=card(c,i); });
+    if(inactive.length){
+      html+=`<div class="grp-label">Not active this month</div>`;
+      inactive.forEach((c,i)=>{ html+=card(c,i); });
+    }
+  }
+  html+=`</div>`;
+  $("#panel").innerHTML=html;
+}
+
+/* ----- DUES (to give) ----- */
+function renderDues(){
+  const open=state.dues.filter(d=>!d.is_settled);
+  const settled=state.dues.filter(d=>d.is_settled).slice(0,8);
+  const out=open.reduce((a,b)=>a+ +b.amount,0);
+
+  let html=`<div class="panel">
+    <div class="panel-head"><h2>People to give</h2><div class="sum">owing <b>${money(out)}</b></div></div>
+    <div class="addrow"><button class="addbtn" onclick="openDue()">+ &nbsp;Add someone you owe</button></div>`;
+
+  if(!open.length && !settled.length){
+    html+=emptyState("hand","No dues right now.","When you borrow or owe someone, note it here so it's never forgotten.");
+  }else{
+    open.forEach((d,i)=>{
+      html+=`<div class="card" style="animation-delay:${Math.min(i,8)*30}ms">
+        <div class="ic" style="background:#a0683a">${esc(d.person).slice(0,2).toUpperCase()}</div>
+        <div class="body"><div class="t">${esc(d.person)}</div>
+          <div class="s">${d.reason?`<span>${esc(d.reason)}</span>`:""}${d.due_date?`<span class="tag">by ${dayLabel(d.due_date)}</span>`:""}</div></div>
+        <div class="amt out">${money(d.amount,false)}</div>
+        <button class="mini" onclick="openSettle('${d.id}')">Settle</button>
+      </div>`;
+    });
+    if(settled.length){
+      html+=`<div style="font-size:12px;font-weight:500;color:var(--faint);letter-spacing:.04em;margin:18px 2px 8px;text-transform:uppercase">Settled</div>`;
+      settled.forEach(d=>{
+        html+=`<div class="card done">
+          <div class="ic" style="background:#9aa69c">${esc(d.person).slice(0,2).toUpperCase()}</div>
+          <div class="body"><div class="t">${esc(d.person)}</div><div class="s">${d.settled_on?`paid ${dayLabel(d.settled_on)}`:"paid"}</div></div>
+          <div class="amt">${money(d.amount,false)}</div>
+          <button class="x" onclick="del('dues','${d.id}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+        </div>`;
+      });
+    }
+  }
+  html+=`</div>`;
+  $("#panel").innerHTML=html;
+}
+
+function emptyState(icon,p,sub){
+  const ic={
+    coin:'<circle cx="12" cy="12" r="8"/><path d="M9.5 9.5h3.5a1.5 1.5 0 0 1 0 3h-3M11 8v8"/>',
+    repeat:'<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+    hand:'<path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8a6 6 0 0 0 6 6h2a6 6 0 0 0 6-6v-3a2 2 0 0 0-4 0"/>'
+  }[icon];
+  return `<div class="empty"><div class="e-ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ic}</svg></div><p>${p}</p><p class="sub">${sub}</p></div>`;
+}
+function ordinal(n){ const s=["th","st","nd","rd"],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+
+/* ---------- sheets / forms ---------- */
+function openSheet(html){ amtCur="AED"; $("#sheet").innerHTML=`<div class="grab"></div>`+html; $("#scrim").classList.add("show"); $("#sheet").classList.add("show"); }
+function closeSheet(){ $("#scrim").classList.remove("show"); $("#sheet").classList.remove("show"); }
+$("#scrim").onclick=closeSheet;
+
+function catOptions(map,sel){ return Object.entries(map).map(([k,v])=>`<option value="${k}" ${k===sel?"selected":""}>${v.label}</option>`).join(""); }
+
+function openExpense(){
+  openSheet(`
+    <h2>Log an expense</h2><div class="sub">What did you spend today?</div>
+    <div class="field amount-field">
+      <label>Amount
+        <span class="cur-toggle">
+          <button type="button" data-c="AED" class="active" onclick="setAmtCur('AED')">AED</button>
+          <button type="button" data-c="INR" onclick="setAmtCur('INR')">INR</button>
+        </span>
+      </label>
+      <div class="amt-input"><span class="cur">AED</span><input id="f-amt" type="number" inputmode="decimal" placeholder="0" oninput="updateAmtPreview()" autofocus></div>
+      <div id="amt-preview" class="amt-preview" style="display:none;cursor:pointer" onclick="editRate()" title="Tap to change the AED to INR rate"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label>Category</label><select id="f-cat">${catOptions(EXP_CATS,"food")}</select></div>
+      <div class="field"><label>Date</label><input id="f-date" type="date" value="${ymd(new Date())}"></div>
+    </div>
+    <div class="field"><label>Note (optional)</label><input id="f-note" type="text" placeholder="e.g. lunch, metro card"></div>
+    <button class="save" onclick="saveExpense()">Save expense</button>
+  `);
+}
+async function saveExpense(){
+  const amt=getAed();
+  if(!(amt>0)){ toast("Enter an amount","err"); return; }
+  await insert("expenses",{ amount:amt, category:$("#f-cat").value, spent_on:$("#f-date").value, note:$("#f-note").value.trim()||null },"Expense logged");
+}
+
+function openCommit(name="",cat="rent"){
+  openSheet(`
+    <h2>Monthly giving</h2><div class="sub">Something you pay or give every month.</div>
+    <div class="field"><label>Name</label><input id="f-name" type="text" value="${esc(name)}" placeholder="e.g. Room rent" autofocus></div>
+    <div class="field amount-field">
+      <label>Amount
+        <span class="cur-toggle">
+          <button type="button" data-c="AED" class="active" onclick="setAmtCur('AED')">AED</button>
+          <button type="button" data-c="INR" onclick="setAmtCur('INR')">INR</button>
+        </span>
+      </label>
+      <div class="amt-input"><span class="cur">AED</span><input id="f-amt" type="number" inputmode="decimal" placeholder="0" oninput="updateAmtPreview()"></div>
+      <div id="amt-preview" class="amt-preview" style="display:none;cursor:pointer" onclick="editRate()" title="Tap to change the AED to INR rate"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label>Type</label><select id="f-cat">${catOptions(COMMIT_CATS,cat)}</select></div>
+      <div class="field"><label>Due day (optional)</label><input id="f-day" type="number" min="1" max="31" placeholder="e.g. 5"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label>Starts</label><input id="f-start" type="month" value="${state.month}"></div>
+      <div class="field"><label>Ends (optional)</label><input id="f-end" type="month" placeholder="ongoing"></div>
+    </div>
+    <div class="amt-preview" style="display:block;color:var(--muted)">Leave “Ends” empty for an ongoing giving like rent.</div>
+    <button class="save" onclick="saveCommit()">Add giving</button>
+  `);
+}
+async function saveCommit(){
+  const name=$("#f-name").value.trim(), amt=getAed(), day=parseInt($("#f-day").value);
+  if(!name){ toast("Give it a name","err"); return; }
+  if(!(amt>0)){ toast("Enter an amount","err"); return; }
+  const start=$("#f-start").value||state.month, end=$("#f-end").value||null;
+  if(end && end<start){ toast("End can't be before start","err"); return; }
+  await insert("commitments",{ name, amount:amt, category:$("#f-cat").value, due_day:isNaN(day)?null:day, start_month:start, end_month:end, is_paused:false },"Giving added");
+}
+function openCommitManage(id){
+  const c=state.commitments.find(x=>String(x.id)===String(id)); if(!c) return;
+  const m=state.month;
+  const meta=commitMeta(c,m);
+  openSheet(`
+    <h2>${esc(c.name)}</h2><div class="sub">${money(c.amount)} · ${meta.note}</div>
+    <div class="two">
+      <div class="field"><label>Starts</label><input id="cm-start" type="month" value="${c.start_month||""}"></div>
+      <div class="field"><label>Ends (optional)</label><input id="cm-end" type="month" value="${c.end_month||""}"></div>
+    </div>
+    <div class="addrow" style="margin-top:4px">
+      <button class="addbtn alt" onclick="endThisMonth('${c.id}')">End after ${monthLabel(m)}</button>
+    </div>
+    <div class="set-row">
+      <div><div class="set-k">Pause</div><div class="set-v" style="font-size:13px">Skip every month until resumed</div></div>
+      <div class="sw ${c.is_paused?'on':''}" onclick="togglePause('${c.id}',${c.is_paused?'true':'false'})"></div>
+    </div>
+    <button class="save" onclick="saveCommitWindow('${c.id}')">Save changes</button>
+    <button class="reset-link" onclick="del('commitments','${c.id}')">Remove this giving completely</button>
+  `);
+}
+async function saveCommitWindow(id){
+  const start=$("#cm-start").value||null, end=$("#cm-end").value||null;
+  if(start && end && end<start){ toast("End can't be before start","err"); return; }
+  await updateRow("commitments",id,{ start_month:start, end_month:end },"Updated");
+}
+async function endThisMonth(id){
+  await updateRow("commitments",id,{ end_month:state.month },"Ends after "+monthLabel(state.month));
+}
+async function togglePause(id,isPaused){
+  await updateRow("commitments",id,{ is_paused:!isPaused }, isPaused?"Resumed":"Paused");
+}
+
+function openDue(){
+  openSheet(`
+    <h2>Someone you owe</h2><div class="sub">Money you need to give back.</div>
+    <div class="field"><label>Person</label><input id="f-person" type="text" placeholder="e.g. Ahmed" autofocus></div>
+    <div class="field amount-field">
+      <label>Amount
+        <span class="cur-toggle">
+          <button type="button" data-c="AED" class="active" onclick="setAmtCur('AED')">AED</button>
+          <button type="button" data-c="INR" onclick="setAmtCur('INR')">INR</button>
+        </span>
+      </label>
+      <div class="amt-input"><span class="cur">AED</span><input id="f-amt" type="number" inputmode="decimal" placeholder="0" oninput="updateAmtPreview()"></div>
+      <div id="amt-preview" class="amt-preview" style="display:none;cursor:pointer" onclick="editRate()" title="Tap to change the AED to INR rate"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label>For (optional)</label><input id="f-reason" type="text" placeholder="e.g. lunch, loan"></div>
+      <div class="field"><label>By when (optional)</label><input id="f-due" type="date"></div>
+    </div>
+    <button class="save" onclick="saveDue()">Add</button>
+  `);
+}
+async function saveDue(){
+  const person=$("#f-person").value.trim(), amt=getAed();
+  if(!person){ toast("Who do you owe?","err"); return; }
+  if(!(amt>0)){ toast("Enter an amount","err"); return; }
+  await insert("dues",{ person, amount:amt, reason:$("#f-reason").value.trim()||null, due_date:$("#f-due").value||null },"Added to your dues");
+}
+
+function openIncome(){
+  const m=state.month;
+  const list=state.income.filter(i=>i.month===m);
+  let manage="";
+  if(list.length){
+    const total=list.reduce((a,b)=>a+ +b.amount,0);
+    manage=`<div class="ms-head">This month's streams <b>${money(total)}</b></div><div>`;
+    list.forEach(i=>{
+      manage+=`<div class="ms-item"><div class="body"><div class="t">${esc(i.source)||"Income"}</div><div class="s">${esc(i.note)||monthLabel(m)}</div></div>
+        <div class="amt">${money(i.amount,false)}</div>
+        <button class="x" onclick="delIncome('${i.id}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div>`;
+    });
+    manage+=`</div>`;
+  }
+  openSheet(`
+    <h2>Income · ${monthLabel(m)}</h2><div class="sub">Add each stream on its own — salary, freelance, your own projects. They all add up to your monthly income.</div>
+    <div class="field amount-field">
+      <label>Amount
+        <span class="cur-toggle">
+          <button type="button" data-c="AED" class="active" onclick="setAmtCur('AED')">AED</button>
+          <button type="button" data-c="INR" onclick="setAmtCur('INR')">INR</button>
+        </span>
+      </label>
+      <div class="amt-input"><span class="cur">AED</span><input id="f-amt" type="number" inputmode="decimal" placeholder="0" oninput="updateAmtPreview()" autofocus></div>
+      <div id="amt-preview" class="amt-preview" style="display:none;cursor:pointer" onclick="editRate()" title="Tap to change the AED to INR rate"></div>
+    </div>
+    <div class="field"><label>Source</label>
+      <input id="f-src" type="text" value="Salary" placeholder="e.g. Salary, Sukoon, Zeke">
+      <div class="chips" id="src-chips" style="margin-top:10px;margin-bottom:0">
+        ${state.sources.map(s=>`<span class="chip src-chip"><button class="chip-label" onclick="pickSource('${s.id}')">${esc(s.name)}</button><button class="chip-x" onclick="delSource('${s.id}')" title="Remove stream">×</button></span>`).join("")}
+        <span class="addsrc"><input id="f-newsrc" type="text" placeholder="New stream…" onkeydown="if(event.key==='Enter'){event.preventDefault();addSource();}"><button class="mini" onclick="addSource()">Add</button></span>
+      </div>
+    </div>
+    <button class="save" onclick="saveIncome()">Add income</button>
+    ${manage}
+  `);
+}
+async function saveIncome(){
+  const amt=getAed();
+  if(!(amt>0)){ toast("Enter an amount","err"); return; }
+  const src=$("#f-src").value.trim()||"Salary";
+  if(!state.sources.some(s=>s.name.toLowerCase()===src.toLowerCase())){
+    try{ await db.from("income_sources").insert({name:src}); }catch(e){}
+  }
+  await insert("income",{ month:state.month, amount:amt, source:src },"Income added");
+}
+
+/* ---------- mutations ---------- */
+async function insert(table,row,okMsg){
+  try{
+    const {data,error}=await db.from(table).insert(row).select();
+    if(error) throw error;
+    const created=(data&&data[0])?data[0]:null;
+    if(created){ pushUndo(okMsg||"Added", async()=>{ await db.from(table).delete().eq("id",created.id); }); }
+    closeSheet(); toast(okMsg||"Saved","ok"); await loadAll();
+  }catch(e){ console.error(e); toast("Couldn't save — try again","err"); }
+}
+async function updateRow(table,id,patch,okMsg){
+  const arr=state[STATE_KEY[table]]||[];
+  const before=arr.find(r=>String(r.id)===String(id));
+  const prev={}; if(before){ for(const k of Object.keys(patch)) prev[k]=before[k]; }
+  try{
+    const {error}=await db.from(table).update(patch).eq("id",id);
+    if(error) throw error;
+    if(before){ pushUndo(okMsg||"Updated", async()=>{ await db.from(table).update(prev).eq("id",id); }); }
+    closeSheet(); toast(okMsg||"Updated","ok"); await loadAll();
+  }catch(e){ console.error(e); toast("Couldn't update — try again","err"); }
+}
+const STATE_KEY={ income:"income", commitments:"commitments", dues:"dues", expenses:"expenses", income_sources:"sources", commitment_logs:"logs" };
+async function del(table,id){
+  const arr=state[STATE_KEY[table]]||[];
+  const found=arr.find(r=>String(r.id)===String(id));
+  try{
+    const {error}=await db.from(table).delete().eq("id",id);
+    if(error) throw error;
+    if(found){
+      const {id:_i,created_at:_c,user_id:_u,...rest}=found;
+      pushUndo("Removed", async()=>{ await db.from(table).insert(rest); });
+      toastUndo("Removed");
+    } else toast("Removed","ok");
+    await loadAll();
+  }catch(e){ console.error(e); toast("Couldn't remove","err"); }
+}
+async function delIncome(id){ await del("income",id); openIncome(); }
+function openSettle(id){
+  const d=state.dues.find(x=>String(x.id)===String(id)); if(!d) return;
+  openSheet(`
+    <h2>Settle with ${esc(d.person)}</h2>
+    <div class="sub">Paying back ${money(d.amount)}${d.reason?" · "+esc(d.reason):""}.</div>
+    <label class="opt-check">
+      <input type="checkbox" id="settle-asexp">
+      <span><b>Also log as an expense</b><small>Tick only if this wasn't already logged in Daily — avoids counting it twice.</small></span>
+    </label>
+    <button class="save" onclick="confirmSettle('${d.id}')">Mark as paid</button>
+  `);
+}
+async function confirmSettle(id){
+  const d=state.dues.find(x=>String(x.id)===String(id)); if(!d) return;
+  const alsoExp=$("#settle-asexp") && $("#settle-asexp").checked;
+  try{
+    const {error}=await db.from("dues").update({is_settled:true,settled_on:ymd(new Date())}).eq("id",id);
+    if(error) throw error;
+    let expId=null;
+    if(alsoExp){
+      try{ const {data}=await db.from("expenses").insert({ amount:+d.amount, category:"other", spent_on:ymd(new Date()), note:"Repaid "+d.person+(d.reason?" · "+d.reason:"") }).select(); if(data&&data[0]) expId=data[0].id; }catch(e){}
+    }
+    pushUndo("Settle "+d.person, async()=>{
+      await db.from("dues").update({is_settled:false,settled_on:null}).eq("id",id);
+      if(expId){ try{ await db.from("expenses").delete().eq("id",expId); }catch(e){} }
+    });
+    closeSheet(); toast(alsoExp?"Settled & logged — alhamdulillah":"Settled — alhamdulillah","ok"); await loadAll();
+  }catch(e){ console.error(e); toast("Couldn't settle","err"); }
+}
+async function togglePaid(id,amount,isPaid){
+  const m=state.month;
+  try{
+    if(isPaid){
+      const {error}=await db.from("commitment_logs").delete().eq("commitment_id",id).eq("month",m);
+      if(error) throw error;
+    }else{
+      const {error}=await db.from("commitment_logs").upsert(
+        {commitment_id:id,month:m,amount_paid:amount,paid_on:ymd(new Date())},
+        {onConflict:"commitment_id,month"});
+      if(error) throw error;
+    }
+    const c=state.commitments.find(x=>String(x.id)===String(id));
+    pushUndo((isPaid?"Unmark ":"Mark paid ")+(c?c.name:""), async()=>{
+      if(isPaid){ await db.from("commitment_logs").upsert({commitment_id:id,month:m,amount_paid:amount,paid_on:ymd(new Date())},{onConflict:"commitment_id,month"}); }
+      else { await db.from("commitment_logs").delete().eq("commitment_id",id).eq("month",m); }
+    });
+    await loadAll();
+  }catch(e){ console.error(e); toast("Couldn't update","err"); }
+}
+
+/* ---------- UI wiring ---------- */
+function bindUI(){
+  document.querySelectorAll(".tabs button").forEach(b=>{
+    b.onclick=()=>{ state.tab=b.dataset.tab; document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("active",x===b)); renderPanel(); };
+  });
+  $("#m-prev").onclick=()=>{ state.month=shiftMonth(state.month,-1); refreshMonth(); renderAll(); };
+  $("#m-next").onclick=()=>{ state.month=shiftMonth(state.month,1); refreshMonth(); renderAll(); };
+  $("#stat-income").onclick=openIncome;
+  $("#stat-monthly").onclick=()=>switchTab("monthly");
+  $("#stat-dues").onclick=()=>switchTab("dues");
+  $("#stat-spent").onclick=()=>switchTab("daily");
+  $("#gear").onclick=openSettings;
+  $("#undo-btn").onclick=undo;
+  refreshUndoBtn();
+}
+function switchTab(t){ state.tab=t; document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("active",x.dataset.tab===t)); renderPanel(); }
+function setSrc(s){ const el=document.querySelector("#f-src"); if(el){ el.value=s; el.focus(); } }
+function pickSource(id){ const s=state.sources.find(x=>String(x.id)===String(id)); if(s){ const el=document.querySelector("#f-src"); if(el){ el.value=s.name; el.focus(); } } }
+async function delSource(id){ await del("income_sources",id); openIncome(); }
+async function addSource(){
+  const el=document.querySelector("#f-newsrc"); const name=(el?el.value:"").trim();
+  if(!name){ toast("Name the stream","err"); return; }
+  if(state.sources.some(s=>s.name.toLowerCase()===name.toLowerCase())){ const f=document.querySelector("#f-src"); if(f) f.value=name; toast("Already a stream","err"); return; }
+  try{ const {error}=await db.from("income_sources").insert({name}); if(error) throw error; toast("Stream added","ok"); await loadAll(); openIncome(); const f=document.querySelector("#f-src"); if(f) f.value=name; }
+  catch(e){ console.error(e); toast("Couldn't add — run the migration?","err"); }
+}
+function openSettings(){
+  const host=(getCreds().u||"").replace(/^https?:\/\//,"").replace(/\/$/,"");
+  openSheet(`
+    <h2>Settings</h2><div class="sub">Mizan · your money, in balance</div>
+    <div class="set-row">
+      <div><div class="set-k">Exchange rate</div><div class="set-v">1 AED = <span id="set-rate">${fxRate().toFixed(2)}</span> INR</div></div>
+      <button class="mini" onclick="editRate()">Change</button>
+    </div>
+    <div class="set-row">
+      <div><div class="set-k">Account</div><div class="set-v">Signed in &amp; locked to you</div></div>
+      <span class="set-badge">secure</span>
+    </div>
+    <div class="set-row">
+      <div><div class="set-k">Connected project</div><div class="set-v" style="font-size:13px;word-break:break-all">${esc(host)}</div></div>
+    </div>
+    <div class="set-note">Your numbers live in your own Supabase, locked to your login. Updating this app never changes data you've already added.</div>
+    <button class="save" onclick="signOut()">Sign out</button>
+    <button class="reset-link" onclick="resetConnection()">Reset connection on this device</button>
+  `);
+}
+function resetConnection(){
+  if(!confirm("Reset the saved connection on this device?\n\nYour data in Supabase is untouched — the app just reloads on its built-in project.")) return;
+  localStorage.removeItem("mizan_url"); localStorage.removeItem("mizan_key"); location.reload();
+}
+function refreshMonth(){
+  $("#m-label").textContent=monthLabel(state.month);
+  $("#m-today").textContent = state.month===ym(new Date()) ? "this month" : "";
+}
+
+/* go */
+start();
+</script>
+</body>
+</html>
