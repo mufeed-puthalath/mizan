@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#143d30" />
-<title>Mizan — Expense & Giving Tracker</title>
+<title>Mizan - Expense & Giving Tracker</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -382,7 +382,7 @@
   <div class="monthnav">
     <button id="m-prev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
     <div>
-      <div class="label" id="m-label">—</div>
+      <div class="label" id="m-label">-</div>
       <div class="today-pill" id="m-today" style="text-align:center"></div>
     </div>
     <button id="m-next"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
@@ -401,7 +401,7 @@
 
       <div class="carry" id="carry-row" style="display:none">
         <span class="carry-k" id="carry-k">＋ from earlier months</span>
-        <span class="carry-tot">＝ <b id="carry-tot">—</b> <small id="carry-sub">to spend with carry-over</small></span>
+        <span class="carry-tot">＝ <b id="carry-tot">-</b> <small id="carry-sub">to spend with carry-over</small></span>
       </div>
 
       <div class="bar" id="hero-bar"><i></i></div>
@@ -409,14 +409,14 @@
 
       <button class="netbal" id="netbal" title="Money in hand through this month">
         <span class="nb-k"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg> Net balance <small id="nb-sub">through this month</small></span>
-        <span class="nb-v num" id="nb-v">—</span>
+        <span class="nb-v num" id="nb-v">-</span>
       </button>
 
       <div class="stats">
-        <button class="stat" id="stat-income"><div class="k">Income</div><div class="v num" id="s-income">—</div></button>
-        <button class="stat" id="stat-monthly"><div class="k">Givings</div><div class="v num" id="s-monthly">—</div></button>
-        <button class="stat owe" id="stat-dues"><div class="k">To give</div><div class="v num" id="s-dues">—</div></button>
-        <button class="stat" id="stat-spent"><div class="k">Spent</div><div class="v num" id="s-spent">—</div></button>
+        <button class="stat" id="stat-income"><div class="k">Income</div><div class="v num" id="s-income">-</div></button>
+        <button class="stat" id="stat-monthly"><div class="k">Givings</div><div class="v num" id="s-monthly">-</div></button>
+        <button class="stat owe" id="stat-dues"><div class="k">To give</div><div class="v num" id="s-dues">-</div></button>
+        <button class="stat" id="stat-spent"><div class="k">Spent</div><div class="v num" id="s-spent">-</div></button>
       </div>
     </div>
 
@@ -438,7 +438,7 @@
 
 <script>
 /* =========================================================
-   CONFIG  — paste your Supabase project URL + anon key here,
+   CONFIG  - paste your Supabase project URL + anon key here,
    OR leave as-is and enter them on the setup screen (saved
    to this browser's localStorage).
    ========================================================= */
@@ -531,7 +531,7 @@ async function undo(){
   finally{ undoing=false; refreshUndoBtn(); await loadAll(); }
 }
 
-/* ---------- currency / FX (INR <-> AED) — you control the rate ---------- */
+/* ---------- currency / FX (INR <-> AED) - you control the rate ---------- */
 const fx={ rate:26 };                             // INR per 1 AED (tap the preview to change)
 let amtCur="AED";                                 // input currency for the open sheet
 (function(){ const s=parseFloat(localStorage.getItem("mizan_rate")); if(s>0) fx.rate=s; })();
@@ -635,7 +635,7 @@ async function loadAll(){
     renderAll();
   }catch(e){
     console.error(e);
-    toast("Couldn't load — did you run the schema?","err");
+    toast("Couldn't load - did you run the schema?","err");
     $("#panel").innerHTML=`<div class="empty"><div class="e-ic">!</div><p>Connection works, but no data came back.</p><p class="sub">Make sure you ran mizan-schema.sql in Supabase.</p></div>`;
   }
 }
@@ -695,8 +695,8 @@ function netBalance(){
   const incomeAll = state.income.filter(i=>i.month<=m).reduce((a,b)=>a+ +b.amount,0);
   const spentAll  = state.expenses.filter(e=>e.spent_on<endEx).reduce((a,b)=>a+ +b.amount,0);
   const paidAll   = paidActive(l=>l.month<=m); // only ticked givings that were active that month
-  // dues leave your hand only when you SETTLE them — count a settled due by its settle date.
-  // BUT if its repayment was already logged as an expense ("Repaid {person}…"), it's in spentAll — don't subtract twice.
+  // dues leave your hand only when you SETTLE them - count a settled due by its settle date.
+  // BUT if its repayment was already logged as an expense ("Repaid {person}…"), it's in spentAll - don't subtract twice.
   const duesPaid  = state.dues.filter(d=>{
     if(!(d.is_settled && d.settled_on && d.settled_on<endEx)) return false;
     const loggedAsExp = state.expenses.some(e=> e.note && e.note.indexOf("Repaid "+d.person)===0 && +e.amount===+d.amount && e.spent_on===d.settled_on);
@@ -719,8 +719,8 @@ function renderHero(){
   animateMoney(el, noIncome?0:c.left);
   // message
   const msg=$("#hero-msg");
-  if(noIncome){ msg.textContent = c.used>0 ? money(c.used)+" in givings & dues set aside — add your income to plan." : "Add your income to see your plan for the month."; }
-  else if(c.left<0){ msg.textContent="You're over by "+money(Math.abs(c.left))+" — ease up where you can."; }
+  if(noIncome){ msg.textContent = c.used>0 ? money(c.used)+" in givings & dues set aside - add your income to plan." : "Add your income to see your plan for the month."; }
+  else if(c.left<0){ msg.textContent="You're over by "+money(Math.abs(c.left))+" - ease up where you can."; }
   else { msg.textContent="of "+money(c.incomeM)+" income · "+money(c.used)+" accounted for."; }
   // bar
   const pct=c.incomeM>0?Math.min(100,(c.used/c.incomeM)*100):0;
@@ -735,7 +735,7 @@ function renderHero(){
     crow.style.display="flex";
     const sign = carry>0 ? "＋" : "−";
     $("#carry-k").innerHTML=`${sign} ${money(Math.abs(carry))} <small>${carry>0?"carried over":"overspent earlier"}</small>`;
-    // when no income is entered yet, the carry itself is the meaningful figure — don't add it to a phantom negative
+    // when no income is entered yet, the carry itself is the meaningful figure - don't add it to a phantom negative
     const combined = noIncome ? carry : (c.left + carry);
     const ct=$("#carry-tot"); ct.textContent=money(combined); ct.className=combined<0?"neg":"";
     const csub=$("#carry-sub"); if(csub) csub.textContent = noIncome ? "available so far" : "to spend with carry-over";
@@ -847,7 +847,7 @@ function renderMonthly(){
   html+=`<div class="addrow"><button class="addbtn alt" onclick="openCommit()">+ &nbsp;Add a monthly giving</button></div>`;
 
   if(!items.length){
-    html+=emptyState("repeat","No fixed givings set up.","Rent, mess, money home, sadaqah — add them once and tick them off each month.");
+    html+=emptyState("repeat","No fixed givings set up.","Rent, mess, money home, sadaqah - add them once and tick them off each month.");
   }else{
     const card=(c,i)=>{
       const cat=COMMIT_CATS[c.category]||COMMIT_CATS.other;
@@ -1066,7 +1066,7 @@ function openIncome(){
     manage+=`</div>`;
   }
   openSheet(`
-    <h2>Income · ${monthLabel(m)}</h2><div class="sub">Add each stream on its own — salary, freelance, your own projects. They all add up to your monthly income.</div>
+    <h2>Income · ${monthLabel(m)}</h2><div class="sub">Add each stream on its own - salary, freelance, your own projects. They all add up to your monthly income.</div>
     <div class="field amount-field">
       <label>Amount
         <span class="cur-toggle">
@@ -1106,7 +1106,7 @@ async function insert(table,row,okMsg){
     const created=(data&&data[0])?data[0]:null;
     if(created){ pushUndo(okMsg||"Added", async()=>{ await db.from(table).delete().eq("id",created.id); }); }
     closeSheet(); toast(okMsg||"Saved","ok"); await loadAll();
-  }catch(e){ console.error(e); toast("Couldn't save — try again","err"); }
+  }catch(e){ console.error(e); toast("Couldn't save - try again","err"); }
 }
 async function updateRow(table,id,patch,okMsg){
   const arr=state[STATE_KEY[table]]||[];
@@ -1117,7 +1117,7 @@ async function updateRow(table,id,patch,okMsg){
     if(error) throw error;
     if(before){ pushUndo(okMsg||"Updated", async()=>{ await db.from(table).update(prev).eq("id",id); }); }
     closeSheet(); toast(okMsg||"Updated","ok"); await loadAll();
-  }catch(e){ console.error(e); toast("Couldn't update — try again","err"); }
+  }catch(e){ console.error(e); toast("Couldn't update - try again","err"); }
 }
 const STATE_KEY={ income:"income", commitments:"commitments", dues:"dues", expenses:"expenses", income_sources:"sources", commitment_logs:"logs" };
 async function del(table,id){
@@ -1142,7 +1142,7 @@ function openSettle(id){
     <div class="sub">Paying back ${money(d.amount)}${d.reason?" · "+esc(d.reason):""}.</div>
     <label class="opt-check">
       <input type="checkbox" id="settle-asexp">
-      <span><b>Also log as an expense</b><small>Tick only if this wasn't already logged in Daily — avoids counting it twice.</small></span>
+      <span><b>Also log as an expense</b><small>Tick only if this wasn't already logged in Daily - avoids counting it twice.</small></span>
     </label>
     <button class="save" onclick="confirmSettle('${d.id}')">Mark as paid</button>
   `);
@@ -1161,7 +1161,7 @@ async function confirmSettle(id){
       await db.from("dues").update({is_settled:false,settled_on:null}).eq("id",id);
       if(expId){ try{ await db.from("expenses").delete().eq("id",expId); }catch(e){} }
     });
-    closeSheet(); toast(alsoExp?"Settled & logged — alhamdulillah":"Settled — alhamdulillah","ok"); await loadAll();
+    closeSheet(); toast(alsoExp?"Settled & logged - alhamdulillah":"Settled - alhamdulillah","ok"); await loadAll();
   }catch(e){ console.error(e); toast("Couldn't settle","err"); }
 }
 async function togglePaid(id,amount,isPaid){
@@ -1209,7 +1209,7 @@ async function addSource(){
   if(!name){ toast("Name the stream","err"); return; }
   if(state.sources.some(s=>s.name.toLowerCase()===name.toLowerCase())){ const f=document.querySelector("#f-src"); if(f) f.value=name; toast("Already a stream","err"); return; }
   try{ const {error}=await db.from("income_sources").insert({name}); if(error) throw error; toast("Stream added","ok"); await loadAll(); openIncome(); const f=document.querySelector("#f-src"); if(f) f.value=name; }
-  catch(e){ console.error(e); toast("Couldn't add — run the migration?","err"); }
+  catch(e){ console.error(e); toast("Couldn't add - run the migration?","err"); }
 }
 function openSettings(){
   const host=(getCreds().u||"").replace(/^https?:\/\//,"").replace(/\/$/,"");
@@ -1232,7 +1232,7 @@ function openSettings(){
   `);
 }
 function resetConnection(){
-  if(!confirm("Reset the saved connection on this device?\n\nYour data in Supabase is untouched — the app just reloads on its built-in project.")) return;
+  if(!confirm("Reset the saved connection on this device?\n\nYour data in Supabase is untouched - the app just reloads on its built-in project.")) return;
   localStorage.removeItem("mizan_url"); localStorage.removeItem("mizan_key"); location.reload();
 }
 function refreshMonth(){
