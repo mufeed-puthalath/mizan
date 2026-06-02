@@ -220,6 +220,12 @@
   .card.inactive{opacity:.6;}
   .card.inactive .amt{color:var(--faint);}
   .grp-label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:20px 2px 8px;}
+  .sortbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 14px;}
+  .sortbar-k{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-right:2px;}
+  .sortpill{font-family:'Jost',sans-serif;font-size:12.5px;font-weight:500;color:var(--muted);background:var(--bg-2);border:1px solid var(--line-2);border-radius:999px;padding:6px 13px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:3px;}
+  .sortpill:active{transform:scale(.96);}
+  .sortpill.on{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .sortpill .sarr{font-size:11px;font-weight:700;opacity:.9;}
   .meta-active{color:var(--primary-2);} .meta-ended{color:var(--rose);} .meta-paused{color:var(--gold);} .meta-upcoming{color:var(--muted);}
   .opt-check{display:flex;gap:12px;align-items:flex-start;padding:14px;border:1px solid var(--line-2);border-radius:13px;background:var(--bg-2);margin:4px 0 16px;cursor:pointer;}
   .opt-check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--primary-2);flex:0 0 auto;}
@@ -846,6 +852,54 @@ function commitMeta(c,m){
   if(c.end_month) return {tag:"active", note:"until "+monthLabel(c.end_month)};
   return {tag:"active", note:"ongoing"};
 }
+/* ---------- list sorting (Givings + To give) ---------- */
+const SORT_DEFAULT={ monthly:{key:"amount",dir:"desc"}, dues:{key:"amount",dir:"desc"} };
+let sortState=(function(){ try{ const v=JSON.parse(localStorage.getItem("mizan_sort")); return (v&&v.monthly&&v.dues)?v:JSON.parse(JSON.stringify(SORT_DEFAULT)); }catch(e){ return JSON.parse(JSON.stringify(SORT_DEFAULT)); } })();
+function saveSort(){ try{ localStorage.setItem("mizan_sort",JSON.stringify(sortState)); }catch(e){} }
+const SORT_OPTS={
+  monthly:[ {key:"amount",label:"Amount"}, {key:"day",label:"Due day"}, {key:"name",label:"Name"} ],
+  dues:[ {key:"amount",label:"Amount"}, {key:"date",label:"Date"}, {key:"name",label:"Person"} ]
+};
+function setSort(which,key){
+  const s=sortState[which];
+  if(s.key===key){ s.dir = s.dir==="desc" ? "asc" : "desc"; }
+  else { s.key=key; s.dir = (key==="name") ? "asc" : "desc"; }
+  saveSort(); renderPanel();
+}
+function sortArrow(which,key){
+  const s=sortState[which];
+  if(s.key!==key) return "";
+  return s.dir==="desc" ? ' <span class="sarr">↓</span>' : ' <span class="sarr">↑</span>';
+}
+function sortBar(which){
+  const opts=SORT_OPTS[which]; const s=sortState[which];
+  let h='<div class="sortbar"><span class="sortbar-k">Sort</span>';
+  opts.forEach(o=>{ h+=`<button class="sortpill ${s.key===o.key?'on':''}" onclick="setSort('${which}','${o.key}')">${o.label}${sortArrow(which,o.key)}</button>`; });
+  h+='</div>';
+  return h;
+}
+function applySortMonthly(arr){
+  const {key,dir}=sortState.monthly; const sgn=dir==="desc"?-1:1;
+  const a=arr.slice();
+  a.sort((x,y)=>{
+    if(key==="amount") return sgn*((+x.amount)-(+y.amount));
+    if(key==="day"){ const dx=x.due_day||99, dy=y.due_day||99; return sgn*(dx-dy); }
+    if(key==="name") return sgn*String(x.name||"").localeCompare(String(y.name||""));
+    return 0;
+  });
+  return a;
+}
+function applySortDues(arr){
+  const {key,dir}=sortState.dues; const sgn=dir==="desc"?-1:1;
+  const a=arr.slice();
+  a.sort((x,y)=>{
+    if(key==="amount") return sgn*((+x.amount)-(+y.amount));
+    if(key==="date"){ const dx=x.settled_on||x.due_date||x.created_at||"", dy=y.settled_on||y.due_date||y.created_at||""; return sgn*String(dx).localeCompare(String(dy)); }
+    if(key==="name") return sgn*String(x.person||"").localeCompare(String(y.person||""));
+    return 0;
+  });
+  return a;
+}
 function renderMonthly(){
   const m=state.month;
   const items=state.commitments;
@@ -871,6 +925,8 @@ function renderMonthly(){
   if(!items.length){
     html+=emptyState("repeat","No fixed givings set up.","Rent, mess, money home, sadaqah - add them once and tick them off each month.");
   }else{
+    if(items.length>1) html+=sortBar("monthly");
+    const sActive=applySortMonthly(active), sInactive=applySortMonthly(inactive);
     const card=(c,i)=>{
       const cat=COMMIT_CATS[c.category]||COMMIT_CATS.other;
       const isPaid=paidIds.has(c.id);
@@ -886,10 +942,10 @@ function renderMonthly(){
             :`<span class="mini" onclick="openCommitManage('${c.id}')">manage</span>`}
       </div>`;
     };
-    active.forEach((c,i)=>{ html+=card(c,i); });
-    if(inactive.length){
+    sActive.forEach((c,i)=>{ html+=card(c,i); });
+    if(sInactive.length){
       html+=`<div class="grp-label">Not active this month</div>`;
-      inactive.forEach((c,i)=>{ html+=card(c,i); });
+      sInactive.forEach((c,i)=>{ html+=card(c,i); });
     }
   }
   html+=`</div>`;
@@ -909,7 +965,9 @@ function renderDues(){
   if(!open.length && !settled.length){
     html+=emptyState("hand","No dues right now.","When you borrow or owe someone, note it here so it's never forgotten.");
   }else{
-    open.forEach((d,i)=>{
+    if((open.length+settled.length)>1) html+=sortBar("dues");
+    const sOpen=applySortDues(open), sSettled=applySortDues(settled);
+    sOpen.forEach((d,i)=>{
       html+=`<div class="card" style="animation-delay:${Math.min(i,8)*30}ms">
         <div class="ic" style="background:#a0683a">${esc(d.person).slice(0,2).toUpperCase()}</div>
         <div class="body"><div class="t">${esc(d.person)}</div>
@@ -920,7 +978,7 @@ function renderDues(){
     });
     if(settled.length){
       html+=`<div style="font-size:12px;font-weight:500;color:var(--faint);letter-spacing:.04em;margin:18px 2px 8px;text-transform:uppercase">Settled</div>`;
-      settled.forEach(d=>{
+      sSettled.forEach(d=>{
         html+=`<div class="card done">
           <div class="ic" style="background:#9aa69c">${esc(d.person).slice(0,2).toUpperCase()}</div>
           <div class="body"><div class="t">${esc(d.person)}</div><div class="s">${d.settled_on?`paid ${dayLabel(d.settled_on)}`:"paid"}</div></div>
